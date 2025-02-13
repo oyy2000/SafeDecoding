@@ -176,3 +176,8 @@ wandb
 # Exp outputs
 exp_outputs
 
+exp/*.json
+
+exp**/**/*.json
+lora_modules/llama2/
+lora_modules/mistral

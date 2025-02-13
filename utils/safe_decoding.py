@@ -42,7 +42,7 @@ class SafeDecoding:
             inputs_duplicated = {k:v.repeat(2,1) for k,v in inputs.items()}
 
             outputs = self.model.generate(**inputs_duplicated,
-                                    adapter_names=self.adapter_names,
+                                    # adapter_names=self.adapter_names,
                                     generation_config=gen_config,
                                     pad_token_id=self.tokenizer.pad_token_id,
                                     return_dict_in_generate=True,

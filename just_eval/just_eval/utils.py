@@ -12,10 +12,11 @@ import re
 
 
 class GPT:
-    def __init__(self, model_name, api=None, temperature=0, seed=0):
+    def __init__(self, model_name, api=None, base_url=None, temperature=0, seed=0):
         self.model_name = model_name
         self.client = OpenAI(
-            api_key=api
+            api_key=api,
+            base_url=base_url
         )
         self.T = temperature
         self.seed=seed
@@ -149,6 +150,7 @@ def openai_chat_request(
     model: str=None,
     engine: str=None,
     api_key: str=None,
+    base_url: str=None,
     temperature: float=0,
     max_tokens: int=512,
     top_p: float=1.0,
@@ -183,7 +185,7 @@ def openai_chat_request(
         messages = [{"role":"system","content":"You are an AI assistant that helps people find information."},
                 {"role":"user","content": prompt}]
     
-    model_instance = GPT(model, api=api_key, temperature=temperature)
+    model_instance = GPT(model, api=api_key, base_url=base_url,temperature=temperature)
     response = model_instance(messages,
                             n=n,  
                             debug=True,

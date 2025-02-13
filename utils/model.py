@@ -6,10 +6,10 @@ import boto3
 import json
 
 class GPT:
-    def __init__(self, model_name, api=None, temperature=0, seed=0):
+    def __init__(self, model_name, api, temperature=0, seed=0):
         self.model_name = model_name
         self.client = OpenAI(
-            api_key=api
+            api_key=api,
         )
         self.T = temperature
         self.seed=seed

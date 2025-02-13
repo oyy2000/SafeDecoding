@@ -95,10 +95,6 @@ elif args.model_name == "mistral":
         model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/models/data_AdvBench/Mistral-7B-Instruct-v0.3-unlearned_lora_True_layer_28-31_max_steps_1000_param_None_time_20241014_191929"
     elif "LayerBugFixer" in args.defender:
         model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/saved_evaluations/sota/data_step_10x/Mistral-7B-Instruct-v0.3-unlearned_lora_False_layer_28-30_max_steps_1000_param_qv_time_20241009_212504"
-    elif "no_random_unlearning_1" in args.defender:
-        model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/models/data_step2_10x/Mistral-7B-Instruct-v0.3-unlearned_no_random_lora_False_layer_30-31_max_steps_100_param_qv_lr_2e-06_bad_weight_0.5_time_20241216_201736"
-    elif "no_random_unlearning_2" in args.defender:
-        model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/models/data_step2_10x/Mistral-7B-Instruct-v0.3-unlearned_no_random_lora_False_layer_29-31_max_steps_100_param_mlp_lr_2e-06_bad_weight_0.5_time_20241216_200937"
     else:
         model_name = "mistralai/Mistral-7B-Instruct-v0.3"
     template_name = 'mistral'    
@@ -107,12 +103,6 @@ elif args.model_name == "llama2":
         model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/models/data_AdvBench/Llama-2-7b-chat-unlearned_lora_True_layer_31-31_max_steps_1000_param_qvnorm_time_20241015_173902"
     elif "LayerBugFixer" in args.defender:
         model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/models/data_step2_10x/Llama-2-7b-chat-unlearned_lora_False_layer_30-31_max_steps_1000_param_qv_time_20241015_165840"
-    elif "IB4LLMs" in args.defender:
-        model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/jailbreaking_related/IB4LLMs/models/vib_tinyllama_llama2_"
-    elif "no_random_unlearning_1" in args.defender:
-        model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/models/data_step2_10x/Llama-2-7b-chat-unlearned_no_random_lora_False_layer_30-31_max_steps_100_param_qv_lr_2e-06_bad_weight_0.5_time_20241216_195200"
-    elif "no_random_unlearning_2" in args.defender:
-        model_name = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/step3/models/data_step2_10x/Llama-2-7b-chat-unlearned_no_random_lora_False_layer_30-31_max_steps_100_param_mlp_lr_2e-06_bad_weight_0.5_time_20241216_195334"
     else:
         model_name = "meta-llama/Llama-2-7b-chat-hf"
     template_name = 'llama-2'
@@ -225,7 +215,7 @@ whitebox_attacker = True if args.attacker in ["GCG", "AutoDAN"] else False
 # Logging
 current_time = time.localtime()
 time_str = str(time.strftime("%Y-%m-%d %H:%M:%S", current_time))
-folder_path = "../exp_unlearning_baseline/"+f'{args.defender if args.is_defense else "nodefense"}_{args.model_name}_{args.attacker}_{args.num_prompts}_{time_str}'
+folder_path = "../exp_outputs_new_new/"+f'{args.defender if args.is_defense else "nodefense"}_{args.model_name}_{args.attacker}_{args.num_prompts}_{time_str}'
 if not os.path.exists(folder_path):
     os.makedirs(folder_path)
 log_name = f'{args.defender if args.is_defense else "nodefense"}_{args.model_name}_{args.attacker}_{time_str}.log'
@@ -421,13 +411,6 @@ if args.only_eval == False:
                     logging.info(f"Self-Exam failed. Return original output.")
                 logging.info(f"Final Output: {outputs}")
             elif "Unlearning" in args.defender:
-                input_manager = PromptManager(tokenizer=tokenizer, 
-                    conv_template=conv_template, 
-                    instruction=user_prompt,
-                    whitebox_attacker=whitebox_attacker)
-                inputs = input_manager.get_inputs()
-                outputs, output_length = safe_decoder.generate_baseline(inputs, gen_config=gen_config)
-            elif "no_random_unlearning" in args.defender:
                 input_manager = PromptManager(tokenizer=tokenizer, 
                     conv_template=conv_template, 
                     instruction=user_prompt,

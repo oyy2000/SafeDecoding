@@ -12,7 +12,7 @@ def load_model_and_tokenizer(model_path, FP16 = True, tokenizer_path=None, devic
     if FP16:
         model = AutoModelForCausalLM.from_pretrained(
                 model_path,
-                torch_dtype=torch.float16,
+                torch_dtype=torch.bfloat16,
                 trust_remote_code=True,
                 **kwargs
             ).to(device).eval()
@@ -43,6 +43,8 @@ def load_model_and_tokenizer(model_path, FP16 = True, tokenizer_path=None, devic
     if 'llama-2' in tokenizer_path:
         tokenizer.pad_token = tokenizer.unk_token
         tokenizer.padding_side = 'left'
+    if 'mistral' in tokenizer_path:
+        tokenizer.pad_token = tokenizer.eos_token
     if 'falcon' in tokenizer_path:
         tokenizer.padding_side = 'left'
     if not tokenizer.pad_token:

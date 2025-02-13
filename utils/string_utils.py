@@ -69,3 +69,9 @@ class PromptManager:
         if self.verbose:
             logging.info(f"Input from get_inputs function: [{self.tokenizer.decode(inputs['input_ids'][0])}]")
         return inputs
+
+    def get_inputs_str(self):
+        # Designed for batched generation
+        prompt = self.get_prompt()
+        
+        return prompt

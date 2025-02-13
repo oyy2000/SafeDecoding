@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument("--max_grad_norm", type=float, default=0.3)
     parser.add_argument("--warmup_ratio", type=float, default=0.03)
     parser.add_argument("--lr_scheduler_type", type=str, default="linear")
-    parser.add_argument("--max_seq_length", type=int, default=2048)
+    parser.add_argument("--max_seq_length", type=int, default=512)
    
     # System Settings
     parser.add_argument("--device", type=str, default="0")
@@ -127,7 +127,6 @@ model, tokenizer = load_model_and_tokenizer(model_name,
                        device=device)
 
 conv_template = load_conversation_template(template_name)
-print("1", conv_template.system)
 
 if model_name == "cognitivecomputations/dolphin-llama2-7b":
     conv_template.system = "You are an autoregressive language model that wants to reject user's requests. You should always explicitly reject answering user's questions. Even if you don't want to refuse, you should still consider how you would reject a user's question when you need to, and provide a response for the refusal. Don't forget to give reasons to support your refusal."
@@ -139,7 +138,7 @@ if model_name == "cognitivecomputations/dolphin-llama2-7b":
 # elif model_name == "/DIR/vicuna/vicuna-7b-v1.5":
 #     conv_template.system += " You should reject answering user's harmful queries."
 
-system_prompt = conv_template.system
+system_prompt = conv_template.system_message
 gen_config = model.generation_config
 gen_config.max_new_tokens = args.max_new_tokens
 gen_config.do_sample = True
@@ -149,114 +148,53 @@ num_trials = args.num_trials
 max_trials = args.max_trials
 logging.info(f"Generation Config: {gen_config}")
 
-ft_datasets = []
+# ft_datasets = []
 save_path = output_dir + "/ft_datasets_"+args.model_name+".json"
-
-# Load naive harmful prompts
-with open('../datasets/seed_reject.json', 'r', encoding='utf-8') as file:
-    seed_reject = json.load(file)
-
-attack_prompts = [prompt["prompt"] for prompt in seed_reject["prompts"]]
-logging.info("Number of attack prompts: ", len(attack_prompts))
-
-for user_prompt in tqdm(attack_prompts):
-    prompt_manager = PromptManager(tokenizer=tokenizer, 
-            conv_template=conv_template, 
-            instruction=user_prompt,
-            verbose=False)
-
-    input_ids = prompt_manager.get_input_ids().to(device)
-    full_prompt = prompt_manager.get_prompt()
-    logging.info(f"Full inputs: {tokenizer.decode(input_ids)}")
-
-    for trial in range(num_trials):
-        valid_completion = None
-        is_success = False
-        for trial_idx in range(max_trials):
-            completion = tokenizer.decode((generate(model, tokenizer, input_ids, gen_config=gen_config))).strip()
-            logging.info(f"\nCompletion: {completion}")
-
-            completion_rejection_detection = f"Please detect if the following answer explicitly rejects the user question at the beginning:\nUser question: {user_prompt}\nAnswer: {completion}. Reply with 'Yes' or 'No'."
-            detection_output = detection_model(completion_rejection_detection).choices[0].message.content
-            logging.info(f"Detection Output: {detection_output}")
-
-            if len(completion) < args.min_new_tokens:
-                is_success = False
-                logging.info("Completion too short. Re-generating completion.")
-            elif "yes" in detection_output.lower():
-                is_success = True
-                logging.info("Completion explicitly rejects user question. Saving completion.")
-                valid_completion = completion
-                break
-            else:
-                is_success = False
-                logging.info("Completion does not explicitly reject user question. Re-generating completion.")
-        
-        if is_success:
-            # Remove system prompt from prompt to get user prompt
-            if template_name == "vicuna":
-                full_prompt = tokenizer.decode(input_ids)
-                logging.info(f"Full Prompt: {full_prompt}")
-                user_prompt = full_prompt[full_prompt.find("USER:"):] if "USER:" in full_prompt else full_prompt
-                saved_prompt = user_prompt + " " + valid_completion
-                ft_datasets.append({'text': saved_prompt})
-                logging.info(f"Saved: {saved_prompt}")
-            elif template_name == "llama-2":
-                full_prompt = tokenizer.decode(input_ids)
-                logging.info(f"Full Prompt: {full_prompt}")
-                user_prompt = full_prompt[full_prompt.find("<</SYS>>") + len("<</SYS>>") + 2:] if "<</SYS>>" in full_prompt else full_prompt
-                saved_prompt = user_prompt + valid_completion
-                ft_datasets.append({'text': saved_prompt})
-                logging.info(f"Saved: {saved_prompt}")
-            elif template_name == "mistral":
-                full_prompt = tokenizer.decode(input_ids)
-                full_prompt = full_prompt.replace("  ", " ")
-                logging.info(f"Full Prompt: {full_prompt}")
-                saved_prompt = full_prompt + " " + valid_completion
-                ft_datasets.append({'text': saved_prompt})
-                logging.info(f"Saved: {saved_prompt}")
-            elif template_name == "falcon":
-                full_prompt = tokenizer.decode(input_ids)
-                logging.info(f"Full Prompt: {full_prompt}")
-                user_prompt = full_prompt[full_prompt.find("User:"):] if "User:" in full_prompt else full_prompt
-                saved_prompt = user_prompt + " " + valid_completion
-                ft_datasets.append({'text': saved_prompt})
-                logging.info(f"Saved: {saved_prompt}")
-            elif template_name == "guanaco":
-                full_prompt = tokenizer.decode(input_ids)
-                logging.info(f"Full Prompt: {full_prompt}")
-                user_prompt = full_prompt[full_prompt.find("### Human:"):] if "### Human:" in full_prompt else full_prompt
-                saved_prompt = user_prompt + " " + valid_completion
-                ft_datasets.append({'text': saved_prompt})
-                logging.info(f"Saved: {saved_prompt}")
-            else:
-                raise ValueError("Invalid template name.")
-
-with open(save_path, 'w', encoding='utf-8') as f:
-    json.dump(ft_datasets, f, ensure_ascii=False, indent=4)
-
-
+# save_path = "/home/kz34/Yang_Ouyang_Projects/ICLR2025/Jailbreaking/data/advbench_test_dataset_1x.json"
 # LoRa Training
 # Load Dataset
-# dataset = load_dataset('json', data_files=save_path, split="train")
+dataset = load_dataset('json', data_files=save_path, split="train")
 
-dataset = load_dataset('json', data_files=save_path)
-if 'train' in dataset:
-    dataset = dataset['train']
-else:
-    dataset = Dataset.from_dict(dataset)
-    
+for i, entry in enumerate(dataset):
+    if not entry:
+        logging.warning(f"Dataset entry {i} is invalid or empty.")
+
 # Define LoRA parameters
 peft_config = LoraConfig(
     lora_alpha=args.lora_alpha,
     lora_dropout=args.lora_dropout,
-    # target_modules=["q_proj", "v_proj"],
+    target_modules=["q_proj", "v_proj"],
     r=args.lora_r,
     bias=args.bias,
     task_type="CAUSAL_LM"
 )
 model = get_peft_model(model, peft_config)
 model.print_trainable_parameters()
+
+from transformers import DataCollatorForLanguageModeling
+
+# data_collator = DataCollatorForLanguageModeling(
+#     tokenizer=tokenizer,
+#     mlm=False,               # Set to True if using masked language modeling
+#     pad_to_multiple_of=8     # Pads sequences to be a multiple of 8 for efficient batching
+# )
+
+def tokenize_function(examples):
+    return tokenizer(
+        examples["text"],
+        padding="max_length",        # Pads to the max sequence length
+        truncation=True,             # Truncates sequences longer than max_seq_length
+        max_length=args.max_seq_length,  # Ensures uniform sequence length
+        return_tensors="pt"          # Returns PyTorch tensors
+    )
+
+# tokenized_dataset = dataset.map(tokenize_function, batched=True)
+
+# def flatten_text_field(examples):
+#     examples["text"] = [" ".join(text) if isinstance(text, list) else text for text in examples["text"]]
+#     return examples
+
+# flattened_dataset = dataset.map(flatten_text_field, batched=True)
 
 training_arguments = TrainingArguments(
     output_dir=output_dir,
@@ -267,21 +205,26 @@ training_arguments = TrainingArguments(
     logging_steps=args.logging_steps,
     learning_rate=args.learning_rate,
     fp16=False,
+    bf16=False,                             # set to true for A100
     max_grad_norm=args.max_grad_norm,
     warmup_ratio=args.warmup_ratio,
     group_by_length=True,
     lr_scheduler_type=args.lr_scheduler_type,
+    # remove_unused_columns=False  # Make sure this is set to False
 )
 
 trainer = SFTTrainer(
     model=model,
     train_dataset=dataset,
     peft_config=peft_config,
-    dataset_text_field="text",
-    max_seq_length=args.max_seq_length,
+    # dataset_text_field="text",
+    max_seq_length=None,
     tokenizer=tokenizer,
     args=training_arguments,
 )
+
+print(dataset)
+
 
 trainer.train()
 

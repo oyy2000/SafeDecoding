@@ -36,6 +36,8 @@ def get_args():
     
     # OpenAI Configs
     parser.add_argument("--api_key", type=str, default=None)
+    parser.add_argument("--base_url", type=str, default=None)
+    
     parser.add_argument("--model", type=str, default="gpt-4-0314")
     parser.add_argument("--engine", type=str, default=None)
     parser.add_argument("--temperature", type=float, default=0.0)
